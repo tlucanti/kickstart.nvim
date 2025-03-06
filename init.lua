@@ -48,6 +48,20 @@ vim.schedule(function()
   vim.opt.clipboard = 'unnamedplus'
 end)
 
+-- remove trailing spaces
+vim.api.nvim_create_autocmd({ 'BufWritePre' }, {
+  pattern = { '*' },
+  command = [[%s/\s\+$//e]],
+})
+
+-- format python with Black
+vim.api.nvim_create_autocmd('BufWritePre', {
+  pattern = '*.py',
+  callback = function()
+    vim.cmd 'Black'
+  end,
+})
+
 -- Enable break indent
 vim.opt.breakindent = true
 
@@ -75,7 +89,8 @@ vim.opt.splitbelow = true
 --  See `:help 'list'`
 --  and `:help 'listchars'`
 vim.opt.list = true
-vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
+-- »
+vim.opt.listchars = { tab = '┊ ', trail = '·', nbsp = '␣' }
 
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = 'split'
@@ -157,6 +172,12 @@ vim.opt.rtp:prepend(lazypath)
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
+  'psf/black',
+  {
+    'akinsho/bufferline.nvim',
+    opts = {},
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+  },
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
@@ -181,6 +202,21 @@ require('lazy').setup({
         changedelete = { text = '~' },
       },
     },
+  },
+  {
+    'lukas-reineke/virt-column.nvim',
+    lazy = false,
+    config = function()
+      vim.cmd [[
+      set colorcolumn=80,120
+      augroup PythonColorColumn
+        autocmd!
+        autocmd FileType python setlocal colorcolumn=89,120
+      augroup END
+      hi VirtColumn guifg=#345678
+		]]
+      require('virt-column').setup { char = '┊' }
+    end,
   },
 
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
@@ -327,6 +363,49 @@ require('lazy').setup({
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
+
+      -- See `:help telescope.builtin`
+      local builtin = require 'telescope.builtin'
+
+      vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
+      vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
+      vim.keymap.set('n', '<leader>f', builtin.find_files, { desc = 'Search [F]iles' })
+      vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
+      vim.keymap.set('n', '<leader>w', builtin.grep_string, { desc = 'Search current [W]ord' })
+      vim.keymap.set('n', '<leader>g', builtin.live_grep, { desc = 'Live [G]rep' })
+      vim.keymap.set('n', '<leader>d', builtin.diagnostics, { desc = 'Search [D]iagnostics' })
+      vim.keymap.set('n', '<leader>r', builtin.resume, { desc = 'Search [R]esume' })
+      vim.keymap.set('n', '<leader>.', builtin.oldfiles, { desc = 'Search Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[\\] Find existing buffers' })
+
+      -- Diagnostic keymaps
+      vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+      vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Show [E]rror Floating Window' })
+      vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Next [D]iagnostic' })
+      vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Prev [D]iagnostic' })
+
+      -- Slightly advanced example of overriding default behavior and theme
+      vim.keymap.set('n', '<leader>/', function()
+        -- You can pass additional configuration to Telescope to change the theme, layout, etc.
+        builtin.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
+          winblend = 10,
+          previewer = false,
+        })
+      end, { desc = '[/] Fuzzy search in current buffer' })
+
+      -- It's also possible to pass additional configuration options.
+      --  See `:help telescope.builtin.live_grep()` for information about particular keys
+      vim.keymap.set('n', '<leader>s/', function()
+        builtin.live_grep {
+          grep_open_files = true,
+          prompt_title = 'Live Grep in Open Files',
+        }
+      end, { desc = '[S]earch [/] in Open Files' })
+
+      -- Shortcut for searching your Neovim configuration files
+      vim.keymap.set('n', '<leader>sn', function()
+        builtin.find_files { cwd = vim.fn.stdpath 'config' }
+      end, { desc = '[S]earch [N]eovim files' })
     end,
   },
 
@@ -403,56 +482,13 @@ require('lazy').setup({
             vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
           end
 
-          -- See `:help telescope.builtin`
-          local builtin = require 'telescope.builtin'
-
-          vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
-          vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
-          vim.keymap.set('n', '<leader>f', builtin.find_files, { desc = 'Search [F]iles' })
-          vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
-          vim.keymap.set('n', '<leader>w', builtin.grep_string, { desc = 'Search current [W]ord' })
-          vim.keymap.set('n', '<leader>g', builtin.live_grep, { desc = 'Live [G]rep' })
-          vim.keymap.set('n', '<leader>d', builtin.diagnostics, { desc = 'Search [D]iagnostics' })
-          vim.keymap.set('n', '<leader>r', builtin.resume, { desc = 'Search [R]esume' })
-          vim.keymap.set('n', '<leader>.', builtin.oldfiles, { desc = 'Search Recent Files ("." for repeat)' })
-          vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[\\] Find existing buffers' })
-
-          -- Diagnostic keymaps
-          vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
-          vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Show [E]rror Floating Window' })
-          vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Next [D]iagnostic' })
-          vim.keymap.set('n', '[d', vim.diagnostic.goto_next, { desc = 'Prev [D]iagnostic' })
-
-          -- Slightly advanced example of overriding default behavior and theme
-          vim.keymap.set('n', '<leader>/', function()
-            -- You can pass additional configuration to Telescope to change the theme, layout, etc.
-            builtin.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
-              winblend = 10,
-              previewer = false,
-            })
-          end, { desc = '[/] Fuzzy search in current buffer' })
-
-          -- It's also possible to pass additional configuration options.
-          --  See `:help telescope.builtin.live_grep()` for information about particular keys
-          vim.keymap.set('n', '<leader>s/', function()
-            builtin.live_grep {
-              grep_open_files = true,
-              prompt_title = 'Live Grep in Open Files',
-            }
-          end, { desc = '[S]earch [/] in Open Files' })
-
-          -- Shortcut for searching your Neovim configuration files
-          vim.keymap.set('n', '<leader>sn', function()
-            builtin.find_files { cwd = vim.fn.stdpath 'config' }
-          end, { desc = '[S]earch [N]eovim files' })
-
           -- Jump to the definition of the word under your cursor.
           --  This is where a variable was first declared, or where a function is defined, etc.
           --  To jump back, press <C-t>.
           map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
 
           -- Find references for the word under your cursor.
-          map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
+          map('gu', require('telescope.builtin').lsp_references, '[G]oto [U]sages')
 
           -- Jump to the implementation of the word under your cursor.
           --  Useful when your language has ways of declaring types without an actual implementation.
@@ -696,6 +732,12 @@ require('lazy').setup({
       --  into multiple repos for maintenance purposes.
       'hrsh7th/cmp-nvim-lsp',
       'hrsh7th/cmp-path',
+
+      'hrsh7th/cmp-buffer',
+      'amarakon/nvim-cmp-buffer-lines',
+      'hrsh7th/cmp-calc',
+      'uga-rosa/cmp-dictionary',
+      'hrsh7th/cmp-omni',
     },
     config = function()
       -- See `:help cmp`
@@ -715,26 +757,22 @@ require('lazy').setup({
         -- chosen, you will need to read `:help ins-completion`
         --
         -- No, but seriously. Please read `:help ins-completion`, it is really good!
-        mapping = cmp.mapping.preset.insert {
-          -- Select the [n]ext item
-          ['<C-n>'] = cmp.mapping.select_next_item(),
-          -- Select the [p]revious item
-          ['<C-p>'] = cmp.mapping.select_prev_item(),
+        mapping = cmp.mapping {
+          -- Select the next item
+          ['<Tab>'] = cmp.mapping.select_next_item(),
+          -- Select the previous item
+          ['<S-Tab>'] = cmp.mapping.select_prev_item(),
+          -- Accept the completion.
+          --  This will auto-import if your LSP supports it.
+          --  This will expand snippets if the LSP sent a snippet.
+          ['<CR>'] = cmp.mapping.confirm { select = true },
+
+          -- Abort the completion
+          ['<C-e>'] = cmp.mapping.abort(),
 
           -- Scroll the documentation window [b]ack / [f]orward
           ['<C-b>'] = cmp.mapping.scroll_docs(-4),
           ['<C-f>'] = cmp.mapping.scroll_docs(4),
-
-          -- Accept ([y]es) the completion.
-          --  This will auto-import if your LSP supports it.
-          --  This will expand snippets if the LSP sent a snippet.
-          ['<C-y>'] = cmp.mapping.confirm { select = true },
-
-          -- If you prefer more traditional completion keymaps,
-          -- you can uncomment the following lines
-          --['<CR>'] = cmp.mapping.confirm { select = true },
-          --['<Tab>'] = cmp.mapping.select_next_item(),
-          --['<S-Tab>'] = cmp.mapping.select_prev_item(),
 
           -- Manually trigger a completion from nvim-cmp.
           --  Generally you don't need this, because nvim-cmp will display
@@ -908,6 +946,26 @@ require('lazy').setup({
     },
   },
 })
+
+local colours = {
+  -- original md header colors
+  -- 1 = 'guifg=#7aa2f7',
+  -- 2 = 'guifg=#e0af68',
+  -- 3 = 'guifg=#9ece6a',
+  -- 4 = 'guifg=#1abc9c',
+  -- 5 = 'guifg=#bb9af7',
+  -- 6 = 'guifg=#9d7cd8',
+  ['@markup.heading.1.markdown'] = 'guifg=#e0af68',
+  ['@markup.heading.2.markdown'] = 'guifg=#9ece6a',
+  ['@markup.heading.3.markdown'] = 'guifg=#1abc9c',
+  ['@markup.heading.4.markdown'] = 'guifg=#bb9af7',
+  ['@markup.heading.5.markdown'] = 'guifg=#7aa2f7',
+  ['@markup.heading.6.markdown'] = 'guifg=#717d8b',
+}
+
+for group, colour in pairs(colours) do
+  vim.cmd('highlight! ' .. group .. ' ' .. colour)
+end
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
