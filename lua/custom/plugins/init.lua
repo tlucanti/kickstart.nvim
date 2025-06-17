@@ -14,4 +14,5 @@ return {
       require('virt-column').setup { char = '║' }
     end,
   },
+  'rhysd/vim-clang-format',
 }

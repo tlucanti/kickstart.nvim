@@ -40,6 +40,11 @@ vim.opt.mouse = 'a'
 -- Don't show the mode, since it's already in the status line
 vim.opt.showmode = false
 
+vim.opt.tabstop = 8
+vim.opt.softtabstop = 8
+vim.opt.shiftwidth = 8
+vim.opt.expandtab = false
+
 -- Sync clipboard between OS and Neovim.
 --  Schedule the setting after `UiEnter` because it can increase startup-time.
 --  Remove this option if you want your OS clipboard to remain independent.
@@ -173,6 +178,7 @@ require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
   'psf/black',
+  'powerman/vim-plugin-AnsiEsc',
   {
     'akinsho/bufferline.nvim',
     opts = {},
@@ -592,6 +598,7 @@ require('lazy').setup({
         clangd = {},
         gopls = {},
         pyright = {},
+        kotlin_language_server = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -656,7 +663,7 @@ require('lazy').setup({
 
   { -- Autoformat
     'stevearc/conform.nvim',
-    event = { 'BufWritePre' },
+    event = {},
     cmd = { 'ConformInfo' },
     keys = {
       {
@@ -738,6 +745,8 @@ require('lazy').setup({
       'hrsh7th/cmp-calc',
       'uga-rosa/cmp-dictionary',
       'hrsh7th/cmp-omni',
+
+      'rhysd/vim-clang-format',
     },
     config = function()
       -- See `:help cmp`
@@ -966,6 +975,43 @@ local colours = {
 for group, colour in pairs(colours) do
   vim.cmd('highlight! ' .. group .. ' ' .. colour)
 end
+
+-- Function to format with clang-format (works on whole buffer or visual selection)
+function _G.clang_format_buffer(mode)
+  -- Default to normal mode (whole buffer)
+  mode = mode or 'n'
+
+  -- Save cursor position
+  local cursor_pos = vim.fn.getcurpos()
+
+  if mode == 'v' then
+    -- Format only the visually selected text
+    vim.cmd ":'<,'>!clang-format"
+  else
+    -- Format the entire buffer
+    vim.cmd '%!clang-format'
+  end
+
+  -- Restore cursor position
+  vim.fn.setpos('.', cursor_pos)
+end
+
+-- Create the user command with optional range
+vim.api.nvim_create_user_command('ClangFormat', function(opts)
+  if opts.range ~= 0 then
+    -- If range is specified (visual selection), use visual mode formatting
+    _G.clang_format_buffer 'v'
+  else
+    -- Otherwise format the whole buffer
+    _G.clang_format_buffer 'n'
+  end
+end, { range = true })
+
+-- Add key mappings
+vim.keymap.set('n', '<leader>cf', _G.clang_format_buffer, { noremap = true, silent = true, desc = 'Format buffer with clang-format' })
+vim.keymap.set('v', '<leader>cf', function()
+  _G.clang_format_buffer 'v'
+end, { noremap = true, silent = true, desc = 'Format selection with clang-format' })
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
