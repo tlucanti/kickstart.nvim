@@ -491,6 +491,11 @@ require('lazy').setup({
           -- Jump to the definition of the word under your cursor.
           --  This is where a variable was first declared, or where a function is defined, etc.
           --  To jump back, press <C-t>.
+          map('gs', require('telescope.builtin').grep_string, '[G]rep [S]tring')
+
+          -- Jump to the definition of the word under your cursor.
+          --  This is where a variable was first declared, or where a function is defined, etc.
+          --  To jump back, press <C-t>.
           map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
 
           -- Find references for the word under your cursor.
@@ -596,7 +601,7 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         clangd = {},
-        gopls = {},
+        -- gopls = {},
         pyright = {},
         kotlin_language_server = {},
         -- rust_analyzer = {},
@@ -662,6 +667,7 @@ require('lazy').setup({
   },
 
   { -- Autoformat
+    'raimondi/delimitmate',
     'stevearc/conform.nvim',
     event = {},
     cmd = { 'ConformInfo' },
@@ -846,6 +852,7 @@ require('lazy').setup({
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
   { -- Collection of various small independent plugins/modules
+    'bogado/file-line',
     'echasnovski/mini.nvim',
     config = function()
       -- Better Around/Inside textobjects
